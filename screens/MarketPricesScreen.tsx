@@ -18,7 +18,7 @@ import {
   Globe,
   MapIcon
 } from 'lucide-react';
-import { getMarketInsightsStream, getCityFromCoords } from '../services/geminiService';
+import { getMarketInsightsStream } from '../services/groqService';
 import { User } from '../types';
 
 interface MarketPricesScreenProps {
@@ -74,8 +74,18 @@ const MarketPricesScreen: React.FC<MarketPricesScreenProps> = ({ user, onBack, l
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           try {
-            const name = await getCityFromCoords(position.coords.latitude, position.coords.longitude, language);
-            setLocation(name);
+            // Use a simple reverse geocoding approach
+            const { latitude, longitude } = position.coords;
+            // Try to get location name from coordinates
+            try {
+              const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+              const data = await response.json();
+              const address = data.address;
+              const city = address.city || address.town || address.village || address.district || 'India';
+              setLocation(city + ', ' + (address.state || 'India'));
+            } catch (e) {
+              setLocation('India');
+            }
           } catch (e) { console.error(e); } 
           finally { setIsLocating(false); }
         },
