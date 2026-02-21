@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   TrendingDown
 } from 'lucide-react';
-import { searchMarketplaceProducts, MarketplaceProduct } from '../services/geminiService';
+import { searchMarketplaceProducts, MarketplaceProduct } from '../services/groqService';
 
 interface MarketplaceScreenProps {
   onBack: () => void;

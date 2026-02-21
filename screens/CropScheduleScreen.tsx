@@ -17,7 +17,7 @@ import {
   ArrowRight,
   MoreVertical
 } from 'lucide-react';
-import { getDetailedCropSchedule } from '../services/geminiService';
+import { getDetailedCropSchedule } from '../services/groqService';
 import { ActiveCrop } from '../types';
 
 interface CropScheduleScreenProps {

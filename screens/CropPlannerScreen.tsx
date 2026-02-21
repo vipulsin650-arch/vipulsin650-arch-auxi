@@ -13,7 +13,7 @@ import {
   Package,
   ShieldCheck,
 } from 'lucide-react';
-import { getCropInputsPlanStream } from '../services/geminiService';
+import { getCropInputsPlanStream } from '../services/groqService';
 
 interface CropPlannerScreenProps {
   onBack: () => void;
