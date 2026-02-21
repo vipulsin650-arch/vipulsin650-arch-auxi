@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, Loader2, Sparkles, Droplets, FlaskConical, Calendar, ArrowRight, Sprout, ClipboardCheck, Info, ShieldCheck, Target, Zap } from 'lucide-react';
-import { getCropAdviceStream } from '../services/geminiService';
+import { getCropAdviceStream } from '../services/groqService';
 
 interface CropAdviceScreenProps {
   onBack: () => void;
