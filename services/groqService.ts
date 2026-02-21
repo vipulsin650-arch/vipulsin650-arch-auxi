@@ -8,6 +8,58 @@ const MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 const getLangName = (code: string) => LANGUAGES[code as AppLanguage]?.name || "English";
 
+export const chatWithAI = async (
+  userMessage: string, 
+  language: AppLanguage = 'en',
+  sensorContext?: string
+): Promise<string> => {
+  const apiKey = getGroqKey();
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY not configured');
+  }
+
+  const langName = getLangName(language);
+  
+  const systemPrompt = `You are AgriSarthi AI, a highly knowledgeable agricultural expert. You help Indian farmers with crop advice, weather, pest control, government schemes, market prices, and all farming-related questions.
+
+IMPORTANT - Language Guidelines:
+- User may write Hindi words using English letters (romanized Hindi), e.g., "Mere wheat me ki aane lagi hai" or "kaise ho" or "mujhe wheat ke liye sujhav chahiye"
+- UNDERSTAND both English AND Romanized Hindi (hinglish)
+- Respond in ${langName} language
+- Use Hindi script for responses if language is 'hi', use English if language is 'en'
+- Keep responses helpful, direct, and empathetic for Indian farmers
+- Use simple language that farmers can understand
+
+${sensorContext || ''}
+
+Provide accurate, up-to-date information based on current agricultural practices in India.`;
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.8,
+      max_completion_tokens: 1024,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Chat error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'Sorry, I could not understand. Please try again.';
+};
+
 export interface DiseaseResult {
   diseaseName: string;
   cause: string;
