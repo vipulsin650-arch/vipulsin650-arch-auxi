@@ -164,4 +164,14 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
             </div>
             <div className="flex items-center justify-center mt-3">
               <p className="text-[10px] font-black text-emerald-300/70 uppercase tracking-widest">
-                {isListening ? t.statusLis
+                {isListening ? t.statusListening : isProcessing ? t.statusProcessing : t.instruction}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VoiceAssistantScreen;
