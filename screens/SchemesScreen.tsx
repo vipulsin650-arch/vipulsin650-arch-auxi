@@ -13,7 +13,7 @@ import {
   AlertCircle,
   ArrowUpRight
 } from 'lucide-react';
-import { getLiveGovernmentSchemes, LiveScheme } from '../services/geminiService';
+import { getLiveGovernmentSchemes, LiveScheme } from '../services/groqService';
 
 interface SchemesScreenProps {
   onBack: () => void;

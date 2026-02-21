@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Activity, Thermometer, Droplets, Power, Sparkles, Loader2, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Activity, Thermometer, Droplets, Power, Sparkles, Loader2, Wifi, WifiOff, Usb, Settings } from 'lucide-react';
 import { AppLanguage, SensorData } from '../types';
 import { arduinoService } from '../services/arduinoService';
+import { esp32Service } from '../services/esp32Service';
 import { getSensorAdvice } from '../services/sensorAdviceService';
 
 interface SensorDashboardScreenProps {
@@ -10,42 +11,74 @@ interface SensorDashboardScreenProps {
   language: AppLanguage;
 }
 
+type ConnectionMode = 'usb' | 'wifi';
+
 const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, language }) => {
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('usb');
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  const [espIpAddress, setEspIpAddress] = useState('');
+  const [showIpModal, setShowIpModal] = useState(false);
 
   const handleSensorUpdate = useCallback((data: SensorData) => {
     setSensorData(data);
   }, []);
 
   useEffect(() => {
-    const unsubscribe = arduinoService.subscribe(handleSensorUpdate);
-    setIsConnected(arduinoService.getConnectionStatus());
-    setSensorData(arduinoService.getLastData());
+    let unsubscribe: (() => void) | null = null;
+    
+    if (connectionMode === 'usb') {
+      unsubscribe = arduinoService.subscribe(handleSensorUpdate);
+      setIsConnected(arduinoService.getConnectionStatus());
+      setSensorData(arduinoService.getLastData());
+    } else {
+      unsubscribe = esp32Service.subscribe(handleSensorUpdate);
+      setIsConnected(esp32Service.getConnectionStatus());
+      setSensorData(esp32Service.getLastData());
+    }
 
     return () => {
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
-  }, [handleSensorUpdate]);
+  }, [connectionMode, handleSensorUpdate]);
 
   const handleConnect = async () => {
+    if (connectionMode === 'wifi' && !espIpAddress) {
+      setShowIpModal(true);
+      return;
+    }
+
     setIsConnecting(true);
-    const success = await arduinoService.connect();
+    let success = false;
+
+    if (connectionMode === 'usb') {
+      success = await arduinoService.connect();
+    } else {
+      esp32Service.setIpAddress(espIpAddress);
+      success = await esp32Service.connect();
+    }
+
     setIsConnected(success);
     setIsConnecting(false);
-    
+
     if (success) {
-      const data = arduinoService.getLastData();
+      const data = connectionMode === 'usb' 
+        ? arduinoService.getLastData() 
+        : esp32Service.getLastData();
       if (data) setSensorData(data);
     }
   };
 
   const handleDisconnect = async () => {
-    await arduinoService.disconnect();
+    if (connectionMode === 'usb') {
+      await arduinoService.disconnect();
+    } else {
+      esp32Service.disconnect();
+    }
     setIsConnected(false);
     setSensorData(null);
     setAiAdvice('');
@@ -56,10 +89,18 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     setIsToggling(true);
     
     const newState = sensorData.relayStatus ? 'OFF' : 'ON';
-    await arduinoService.sendRelayCommand(newState);
+    
+    let success = false;
+    if (connectionMode === 'usb') {
+      success = await arduinoService.sendRelayCommand(newState as 'ON' | 'OFF');
+    } else {
+      success = await esp32Service.sendRelayCommand(newState as 'ON' | 'OFF' | 'TOGGLE');
+    }
     
     setTimeout(() => {
-      const data = arduinoService.getLastData();
+      const data = connectionMode === 'usb' 
+        ? arduinoService.getLastData() 
+        : esp32Service.getLastData();
       if (data) setSensorData(data);
       setIsToggling(false);
     }, 1000);
@@ -80,6 +121,13 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     }
   };
 
+  const handleIpSubmit = () => {
+    if (espIpAddress.trim()) {
+      setShowIpModal(false);
+      handleConnect();
+    }
+  };
+
   const t = {
     title: language === 'hi' ? 'सेंसर डैशबोर्ड' : 'Sensor Dashboard',
     connect: language === 'hi' ? 'सेंसर कनेक्ट करें' : 'Connect Sensors',
@@ -94,7 +142,14 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     getAdvice: language === 'hi' ? 'AI सलाह लें' : 'Get AI Advice',
     relayOn: language === 'hi' ? 'चालू' : 'ON',
     relayOff: language === 'hi' ? 'बंद' : 'OFF',
-    tapToConnect: language === 'hi' ? 'सेंसर से कनेक्ट करने के लिए टैप करें' : 'Tap to connect to sensors'
+    tapToConnect: language === 'hi' ? 'सेंसर से कनेक्ट करने के लिए टैप करें' : 'Tap to connect to sensors',
+    enterIp: language === 'hi' ? 'ESP32 IP Address दर्ज करें' : 'Enter ESP32 IP Address',
+    ipPlaceholder: language === 'hi' ? '192.168.1.100' : '192.168.1.100',
+    submit: language === 'hi' ? 'कनेक्ट करें' : 'Connect',
+    cancel: language === 'hi' ? 'रद्द करें' : 'Cancel',
+    usbMode: language === 'hi' ? 'USB' : 'USB',
+    wifiMode: language === 'hi' ? 'WiFi' : 'WiFi',
+    selectMode: language === 'hi' ? 'कनेक्शन मोड चुनें' : 'Select Connection Mode'
   };
 
   return (
@@ -103,11 +158,11 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-400 rounded-full blur-[120px]"></div>
       </div>
 
-      <header className="relative z-10 flex items-center mb-8">
+      <header className="relative z-10 flex items-center mb-6">
         <button onClick={onBack} className="p-3 bg-white/10 rounded-2xl text-white active:scale-90 transition-transform">
           <ChevronLeft size={24} />
         </button>
-        <div className="ml-4">
+        <div className="ml-4 flex-1">
           <h2 className="text-xl font-black uppercase tracking-tight leading-none">{t.title}</h2>
           <div className="flex items-center space-x-2 mt-1">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`}></div>
@@ -116,20 +171,61 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
             </p>
           </div>
         </div>
+        {!isConnected && (
+          <div className="flex bg-white/5 rounded-xl p-1">
+            <button
+              onClick={() => setConnectionMode('usb')}
+              className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-xs font-bold transition-all ${
+                connectionMode === 'usb' ? 'bg-emerald-600 text-white' : 'text-emerald-400/60'
+              }`}
+            >
+              <Usb size={14} />
+              <span>{t.usbMode}</span>
+            </button>
+            <button
+              onClick={() => setConnectionMode('wifi')}
+              className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-xs font-bold transition-all ${
+                connectionMode === 'wifi' ? 'bg-emerald-600 text-white' : 'text-emerald-400/60'
+              }`}
+            >
+              <Wifi size={14} />
+              <span>{t.wifiMode}</span>
+            </button>
+          </div>
+        )}
       </header>
+
+      {connectionMode === 'wifi' && !isConnected && (
+        <div className="mb-4 flex items-center space-x-2">
+          <button
+            onClick={() => setShowIpModal(true)}
+            className="flex-1 bg-white/5 border border-white/10 py-3 px-4 rounded-xl flex items-center justify-center space-x-2 text-sm font-bold text-emerald-400"
+          >
+            <Settings size={16} />
+            <span>{espIpAddress ? espIpAddress : t.enterIp}</span>
+          </button>
+        </div>
+      )}
 
       {!isConnected ? (
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="w-32 h-32 bg-white/5 rounded-full flex items-center justify-center mb-8">
             <Activity size={48} className="text-emerald-400/40" />
           </div>
-          <p className="text-emerald-100/40 text-sm font-bold text-center mb-8 max-w-xs">{t.tapToConnect}</p>
+          <p className="text-emerald-100/40 text-sm font-bold text-center mb-8 max-w-xs">
+            {connectionMode === 'wifi' 
+              ? (language === 'hi' ? 'ESP32 IP address दर्ज करें और कनेक्ट करें' : 'Enter ESP32 IP address to connect')
+              : t.tapToConnect
+            }
+          </p>
           <button 
             onClick={handleConnect}
             disabled={isConnecting}
             className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center space-x-3 shadow-xl active:scale-95 transition-transform"
           >
-            {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Wifi size={18} />}
+            {isConnecting ? <Loader2 size={18} className="animate-spin" /> : (
+              connectionMode === 'wifi' ? <Wifi size={18} /> : <Usb size={18} />
+            )}
             <span>{isConnecting ? t.connecting : t.connect}</span>
           </button>
         </div>
@@ -215,6 +311,35 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
             <span>{t.disconnect}</span>
           </button>
         </>
+      )}
+
+      {showIpModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
+          <div className="bg-emerald-900 p-6 rounded-3xl w-full max-w-sm">
+            <h3 className="text-lg font-black uppercase tracking-wide mb-4">{t.enterIp}</h3>
+            <input
+              type="text"
+              value={espIpAddress}
+              onChange={(e) => setEspIpAddress(e.target.value)}
+              placeholder={t.ipPlaceholder}
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 font-bold mb-4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowIpModal(false)}
+                className="flex-1 py-3 rounded-xl font-black text-sm uppercase bg-white/10 text-white"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleIpSubmit}
+                className="flex-1 py-3 rounded-xl font-black text-sm uppercase bg-emerald-600 text-white"
+              >
+                {t.submit}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
