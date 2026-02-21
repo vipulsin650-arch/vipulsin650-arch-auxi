@@ -2,7 +2,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { DiseaseResult, ScheduledTask, AppLanguage, LANGUAGES } from "../types";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAPIKey = () => {
+  return process.env.GEMINI_API_KEY || process.env.API_KEY || 'AIzaSyByR_v-v2wRnOtZ-iDaQtF5fAWklXXc5Ww';
+};
+
+const getAI = () => new GoogleGenAI({ apiKey: getAPIKey() });
 
 // Helper to get the full English name of the language for the prompt
 const getLangName = (code: string) => LANGUAGES[code as AppLanguage]?.name || "English";
@@ -12,7 +16,7 @@ export const detectCropDisease = async (base64Image: string, language: AppLangua
   const langName = getLangName(language);
   
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
@@ -44,7 +48,7 @@ export const getCropAdviceStream = async (crop: string, onChunk: (text: string) 
   const currentYear = new Date().getFullYear();
   
   const response = await ai.models.generateContentStream({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Using Google Search, find the absolute latest ${currentYear}-${currentYear + 1} scientific farming practices for ${crop}. Act as a Senior Agricultural Scientist. Provide a highly structured professional guide in ${langName} language. Highlight key variables like [FERTILIZER NAME] in bold. Headers: [SUMMARY], [CRITICAL FACTORS], [NUTRITION], [IRRIGATION], [YIELD MAXIMIZER].`,
     config: { 
       thinkingConfig: { thinkingBudget: 0 },
@@ -64,7 +68,7 @@ export const getDetailedCropSchedule = async (crop: string, language: AppLanguag
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Using Google Search, find the most effective modern growth timeline for ${crop} suitable for sowing in ${currentMonth}. Create a full growth timeline in ${langName}. Include all critical stages from sowing to harvest. 
     Focus specifically on:
     1. Irrigation (Watering) milestones.
@@ -102,7 +106,7 @@ export const getCropInputsPlanStream = async (crop: string, acres: number, onChu
   const langName = getLangName(language);
   
   const response = await ai.models.generateContentStream({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Using Google Search, find the latest recommended dosage and inputs for ${crop}. Act as a Direct Agriculture Advisor. For ${acres} ACRES of ${crop} in ${langName}, give the EXACT quantities needed. 
     Keep it extremely simple and short. Bold the final numbers.
     
@@ -213,7 +217,7 @@ export const getMarketInsightsStream = async (crop: string, onChunk: (text: stri
   const today = new Date().toLocaleDateString();
   
   const response = await ai.models.generateContentStream({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Search TODAY'S (${today}) LIVE market arrivals and prices for ${crop} in Mandi/Location: "${location || 'India'}". 
     Provide a professional commodity terminal report in ${langName}.
     
@@ -245,7 +249,7 @@ export const getLiveGovernmentSchemes = async (language: AppLanguage = 'en'): Pr
   const currentYear = new Date().getFullYear();
   
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Search for the latest LIVE ${currentYear}-${currentYear + 1} Government of India agriculture schemes and subsidies (e.g., PM-Kisan, PM-FBY, Fertilizer subsidies). 
     Provide a list of at least 5 active schemes with their title, a brief 1-sentence description, and the OFFICIAL GOVT PORTAL URL (ending in .gov.in if possible). 
     Return strictly valid JSON in ${langName}.`,
@@ -286,7 +290,7 @@ export const searchMarketplaceProducts = async (query: string, language: AppLang
   const ai = getAI();
   const langName = getLangName(language);
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: `Search for live prices and purchase links for "${query}" on authorized Indian agricultural websites like IFFCO Bazar, BigHaat, AgriBegri, and Amazon Agri. 
     Provide a list of current products with their exact name, price in INR, platform name, and the direct shopping URL. 
     Return strictly valid JSON in ${langName}.`,

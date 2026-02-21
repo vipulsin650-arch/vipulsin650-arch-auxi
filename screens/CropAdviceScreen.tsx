@@ -12,6 +12,7 @@ const CropAdviceScreen: React.FC<CropAdviceScreenProps> = ({ onBack, language })
   const [selectedCrop, setSelectedCrop] = useState('Wheat');
   const [advice, setAdvice] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const translations = {
     en: {
@@ -39,13 +40,15 @@ const CropAdviceScreen: React.FC<CropAdviceScreenProps> = ({ onBack, language })
   const fetchAdvice = async (crop: string) => {
     setLoading(true);
     setAdvice('');
+    setError('');
     try {
       await getCropAdviceStream(crop, (text) => {
         setAdvice(text);
-        setLoading(false);
       }, language);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('Error fetching advice:', error);
+      setError(error?.message || 'Failed to generate report. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -137,7 +140,7 @@ const CropAdviceScreen: React.FC<CropAdviceScreenProps> = ({ onBack, language })
             </button>
           </div>
 
-          {(advice || loading) && (
+          {(advice || loading || error) && (
             <div className="bg-white p-10 rounded-[50px] shadow-2xl relative overflow-hidden border border-emerald-100 min-h-[400px]">
               {/* Report Header Decoration */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-400 via-emerald-600 to-emerald-950"></div>
@@ -166,6 +169,20 @@ const CropAdviceScreen: React.FC<CropAdviceScreenProps> = ({ onBack, language })
               {advice ? (
                 <div className="relative z-10 animate-in fade-in duration-700">
                   {formatAdvice(advice)}
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                    <ShieldCheck size={32} className="text-red-600" />
+                  </div>
+                  <p className="text-lg font-black text-red-700 mb-2">Error Generating Report</p>
+                  <p className="text-sm font-bold text-red-600/80 mb-4">{error}</p>
+                  <button
+                    onClick={() => fetchAdvice(selectedCrop)}
+                    className="bg-emerald-950 text-white px-6 py-3 rounded-full font-black text-sm"
+                  >
+                    Try Again
+                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20">
