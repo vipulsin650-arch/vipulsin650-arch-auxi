@@ -116,9 +116,9 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
   };
 
   return (
-    <div className="relative min-h-full flex flex-col bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-950">
-      <div className="relative z-10 flex flex-col h-full p-6 pb-32 overflow-y-auto">
-        <header className="flex items-center mb-8 mt-8">
+    <div className="h-screen flex flex-col bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-950 overflow-hidden">
+      <div className="flex-1 flex flex-col p-6 pb-32 overflow-y-auto">
+        <header className="flex items-center mb-8 pt-8">
           <button onClick={onBack} className="bg-white/10 backdrop-blur-md p-3 rounded-2xl text-white/90 shadow-xl border border-white/10 active:scale-90 transition-transform">
             <ChevronLeft size={24} />
           </button>
