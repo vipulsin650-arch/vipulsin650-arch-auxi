@@ -157,32 +157,40 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onBack, language 
               {products.map((item, i) => (
                 <div 
                   key={i} 
-                  className="bg-white p-6 rounded-[40px] border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex flex-col animate-in slide-in-from-bottom-4 duration-500"
+                  className="bg-white p-4 rounded-[40px] border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex flex-col animate-in slide-in-from-bottom-4 duration-500"
                   style={{ animationDelay: `${i * 100}ms` }}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1 mr-4">
-                      <span className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] bg-emerald-50 px-2 py-0.5 rounded-md mb-2 inline-block">{item.platform}</span>
-                      <h4 className="text-lg font-black text-emerald-950 leading-tight">{item.name}</h4>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-2xl font-black text-emerald-600 tracking-tighter">{item.price}</p>
-                       <p className="text-[8px] font-bold text-slate-300 uppercase mt-1">Live Price</p>
-                    </div>
-                  </div>
+                  <div className="flex">
+                    {item.image && (
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 mr-4 bg-emerald-50">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1 mr-4">
+                          <span className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] bg-emerald-50 px-2 py-0.5 rounded-md mb-2 inline-block">{item.platform}</span>
+                          <h4 className="text-lg font-black text-emerald-950 leading-tight">{item.name}</h4>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-2xl font-black text-emerald-600 tracking-tighter">{item.price}</p>
+                        </div>
+                      </div>
 
-                  <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center text-[10px] font-black text-slate-400 uppercase">
-                       <TrendingDown size={14} className="mr-1.5 text-emerald-400" />
-                       Competitive Rate
+                      <div className="mt-auto pt-2 border-t border-slate-50 flex items-center justify-between">
+                        <div className="flex items-center text-[10px] font-black text-slate-400 uppercase">
+                           <TrendingDown size={14} className="mr-1.5 text-emerald-400" />
+                           Competitive Rate
+                        </div>
+                        <button 
+                          onClick={() => window.open(item.link, '_blank')}
+                          className="bg-emerald-950 text-white px-4 py-2 rounded-[20px] font-black text-[11px] uppercase tracking-widest flex items-center shadow-lg active:scale-95 transition-all"
+                        >
+                          {t.buyNow}
+                          <ExternalLink size={14} className="ml-2 opacity-50" />
+                        </button>
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => window.open(item.link, '_blank')}
-                      className="bg-emerald-950 text-white px-6 py-3.5 rounded-[20px] font-black text-[11px] uppercase tracking-widest flex items-center shadow-lg active:scale-95 transition-all"
-                    >
-                      {t.buyNow}
-                      <ExternalLink size={14} className="ml-2 opacity-50" />
-                    </button>
                   </div>
                 </div>
               ))}

@@ -507,6 +507,7 @@ export interface MarketplaceProduct {
   platform: string;
   link: string;
   category: string;
+  image?: string;
 }
 
 export const searchMarketplaceProducts = async (query: string, language: AppLanguage = 'en'): Promise<MarketplaceProduct[]> => {
@@ -560,36 +561,36 @@ const getFallbackProducts = (query: string, language: AppLanguage): MarketplaceP
   const category = query.toLowerCase();
   const products: { [key: string]: MarketplaceProduct[] } = {
     seeds: [
-      { name: 'Goldy Wheat Seeds (Improved)', price: '₹320/kg', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Seeds' },
-      { name: 'Pusa Basmati Rice Seeds', price: '₹450/kg', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Seeds' },
-      { name: 'Mahyco Cotton Seeds', price: '₹750/pack', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Seeds' },
-      { name: 'Syngenta Maize Hybrid', price: '₹280/kg', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Seeds' },
-      { name: 'Nuziveedu Mustard Seeds', price: '₹380/kg', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Seeds' },
-      { name: 'Urad Moong Seeds', price: '₹150/kg', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Seeds' }
+      { name: 'Goldy Wheat Seeds (Improved)', price: '₹320/kg', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Seeds', image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&h=300&fit=crop' },
+      { name: 'Pusa Basmati Rice Seeds', price: '₹450/kg', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Seeds', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&h=300&fit=crop' },
+      { name: 'Mahyco Cotton Seeds', price: '₹750/pack', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Seeds', image: 'https://images.unsplash.com/photo-1592982537447-6f2a6a0c7c18?w=300&h=300&fit=crop' },
+      { name: 'Syngenta Maize Hybrid', price: '₹280/kg', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Seeds', image: 'https://images.unsplash.com/photo-1551754655-cd27d2076?e38w=300&h=300&fit=crop' },
+      { name: 'Nuziveedu Mustard Seeds', price: '₹380/kg', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Seeds', image: 'https://images.unsplash.com/photo-1585155770913-5bfe8e6a9f3e?w=300&h=300&fit=crop' },
+      { name: 'Urad Moong Seeds', price: '₹150/kg', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Seeds', image: 'https://images.unsplash.com/photo-1515543904323-de27c9fa4f20?w=300&h=300&fit=crop' }
     ],
     fertilizer: [
-      { name: 'Urea (46% N) - 50kg', price: '₹300/bag', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Fertilizer' },
-      { name: 'DAP (18% N, 46% P) - 50kg', price: '₹1,350/bag', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Fertilizer' },
-      { name: 'NPK 10-26-26 - 50kg', price: '₹1,200/bag', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Fertilizer' },
-      { name: 'NPK 19-19-19 - 50kg', price: '₹1,100/bag', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Fertilizer' },
-      { name: 'Vermicompost - 50kg', price: '₹600/bag', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Fertilizer' },
-      { name: 'Neem Cake - 25kg', price: '₹450/bag', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Fertilizer' }
+      { name: 'Urea (46% N) - 50kg', price: '₹300/bag', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Fertilizer', image: 'https://images.unsplash.com/photo-1605000797499-95a51c52638a?w=300&h=300&fit=crop' },
+      { name: 'DAP (18% N, 46% P) - 50kg', price: '₹1,350/bag', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Fertilizer', image: 'https://images.unsplash.com/photo-1605000797499-95a51c52638a?w=300&h=300&fit=crop' },
+      { name: 'NPK 10-26-26 - 50kg', price: '₹1,200/bag', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Fertilizer', image: 'https://images.unsplash.com/photo-1628151016000-e37a25686c07?w=300&h=300&fit=crop' },
+      { name: 'NPK 19-19-19 - 50kg', price: '₹1,100/bag', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Fertilizer', image: 'https://images.unsplash.com/photo-1628151016000-e37a25686c07?w=300&h=300&fit=crop' },
+      { name: 'Vermicompost - 50kg', price: '₹600/bag', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Fertilizer', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop' },
+      { name: 'Neem Cake - 25kg', price: '₹450/bag', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Fertilizer', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop' }
     ],
     pesticide: [
-      { name: 'Imidacloprid 17.8% SL - 100ml', price: '₹150', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Pesticide' },
-      { name: 'Chlorpyrifos 20% EC - 500ml', price: '₹280', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Pesticide' },
-      { name: 'Carbendazim 50% WP - 100g', price: '₹120', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Pesticide' },
-      { name: 'Glyphosate 41% SL - 1L', price: '₹350', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Pesticide' },
-      { name: 'Fipronil 5% SC - 100ml', price: '₹180', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Pesticide' },
-      { name: 'Neem Oil - 1L', price: '₹250', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Pesticide' }
+      { name: 'Imidacloprid 17.8% SL - 100ml', price: '₹150', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Pesticide', image: 'https://images.unsplash.com/photo-1632339026429-1068bd1fc87f?w=300&h=300&fit=crop' },
+      { name: 'Chlorpyrifos 20% EC - 500ml', price: '₹280', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Pesticide', image: 'https://images.unsplash.com/photo-1632339026429-1068bd1fc87f?w=300&h=300&fit=crop' },
+      { name: 'Carbendazim 50% WP - 100g', price: '₹120', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Pesticide', image: 'https://images.unsplash.com/photo-1632339026429-1068bd1fc87f?w=300&h=300&fit=crop' },
+      { name: 'Glyphosate 41% SL - 1L', price: '₹350', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Pesticide', image: 'https://images.unsplash.com/photo-1632339026429-1068bd1fc87f?w=300&h=300&fit=crop' },
+      { name: 'Fipronil 5% SC - 100ml', price: '₹180', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Pesticide', image: 'https://images.unsplash.com/photo-1632339026429-1068bd1fc87f?w=300&h=300&fit=crop' },
+      { name: 'Neem Oil - 1L', price: '₹250', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Pesticide', image: 'https://images.unsplash.com/photo-1611605698323-b1e99cfd37ea?w=300&h=300&fit=crop' }
     ],
     tools: [
-      { name: 'Garden Sprayer - 16L', price: '₹850', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Tools' },
-      { name: 'Hand Hoe', price: '₹180', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Tools' },
-      { name: 'Water Pump - 1HP', price: '₹4,500', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Tools' },
-      { name: 'Garden Pipe - 30m', price: '₹400', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Tools' },
-      { name: 'Pruning Shears', price: '₹350', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Tools' },
-      { name: 'Soil Testing Kit', price: '₹1,200', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Tools' }
+      { name: 'Garden Sprayer - 16L', price: '₹850', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Tools', image: 'https://images.unsplash.com/photo-1581141849291-1125c7bde9a9?w=300&h=300&fit=crop' },
+      { name: 'Hand Hoe', price: '₹180', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Tools', image: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?w=300&h=300&fit=crop' },
+      { name: 'Water Pump - 1HP', price: '₹4,500', platform: 'AgriBegri', link: 'https://www.agribegri.com', category: 'Tools', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=300&h=300&fit=crop' },
+      { name: 'Garden Pipe - 30m', price: '₹400', platform: 'Amazon', link: 'https://www.amazon.in', category: 'Tools', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop' },
+      { name: 'Pruning Shears', price: '₹350', platform: 'BigHaat', link: 'https://www.bighaat.com', category: 'Tools', image: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?w=300&h=300&fit=crop' },
+      { name: 'Soil Testing Kit', price: '₹1,200', platform: 'IFFCO Bazar', link: 'https://www.iffcobazar.in', category: 'Tools', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop' }
     ]
   };
   
