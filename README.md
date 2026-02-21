@@ -1,20 +1,101 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# AgriSarthi - Voice-Powered Farming Assistant
 
-# Run and deploy your AI Studio app
+A comprehensive mobile farming application powered by AI voice assistance. AgriSarthi helps farmers with crop management, disease detection, market prices, government schemes, and more - all through voice commands.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1d028D_mXjzU4mdphrgUOVYTnlAq3mNBI
+### Voice Assistant
+AI-powered voice assistant using Google Gemini API to answer farming questions in multiple languages (Hindi, English, and more)
 
-## Run Locally
+### Crop Management
+- **Crop Advice**: Get expert recommendations for crops based on season and location
+- **Crop Planner**: Plan your cropping schedule efficiently
+- **Crop Schedule**: Track and manage crop cycles
 
-**Prerequisites:**  Node.js
+### Disease Detection
+Check crops for diseases and get treatment recommendations
 
+### Market Prices
+Real-time market prices for your produce
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Government Schemes
+Information about government schemes and subsidies for farmers
+
+### Marketplace
+Buy and sell agricultural products
+
+### Tutorials
+Educational content and farming tutorials
+
+### Sensor Dashboard
+Connect with Arduino sensors to monitor:
+- Soil moisture
+- Temperature
+- Humidity
+
+## Tech Stack
+
+- **Frontend**: React + TypeScript
+- **Build Tool**: Vite
+- **AI**: Google Gemini API
+- **Styling**: Custom CSS with dark mode support
+- **Mobile**: PWA-ready responsive design
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- Gemini API Key
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variable
+# Create .env.local file and add:
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Run locally
+npm run dev
+```
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+The build output will be in the `dist` folder.
+
+## Deployment
+
+Deploy to Vercel:
+1. Push code to GitHub
+2. Go to [Vercel](https://vercel.com)
+3. Import the repository
+4. Add `GEMINI_API_KEY` in environment variables
+5. Deploy
+
+## Project Structure
+
+```
+├── screens/          # App screens (Home, Voice Assistant, Market, etc.)
+├── components/       # Reusable UI components
+├── services/         # API services (Gemini, Arduino, Sensor advice)
+├── types.ts          # TypeScript type definitions
+├── App.tsx           # Main app component
+├── index.tsx         # Entry point
+└── vite.config.ts   # Vite configuration
+```
+
+## Languages Supported
+
+- English
+- Hindi
+- And more...
+
+## License
+
+MIT License

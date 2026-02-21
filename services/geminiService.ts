@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { DiseaseResult, ScheduledTask, AppLanguage, LANGUAGES } from "../types";
 
 const getAPIKey = () => {
-  return process.env.GEMINI_API_KEY || process.env.API_KEY || 'AIzaSyByR_v-v2wRnOtZ-iDaQtF5fAWklXXc5Ww';
+  return process.env.GEMINI_API_KEY || process.env.API_KEY || 'AIzaSyA0QPL6rL4YsGUGyZUnxjFrG955060EkZc';
 };
 
 const getAI = () => new GoogleGenAI({ apiKey: getAPIKey() });
