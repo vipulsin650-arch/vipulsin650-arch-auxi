@@ -9,8 +9,8 @@
 
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* ssid = "YOUR_WIFI_SSID";         // Replace with your WiFi name
-const char* password = "YOUR_WIFI_PASSWORD"; // Replace with your WiFi password
+const char* ssid = "HOTSPOT";
+const char* password = "123456789";
 
 WebServer server(80);
 

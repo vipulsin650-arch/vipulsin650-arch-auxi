@@ -320,3 +320,39 @@ export const searchMarketplaceProducts = async (query: string, language: AppLang
     return [];
   }
 };
+
+export const chatWithAI = async (
+  userMessage: string,
+  language: AppLanguage = 'en',
+  sensorContext?: string
+): Promise<string> => {
+  const ai = getAI();
+  const langName = getLangName(language);
+
+  const systemPrompt = `You are AgriSarthi AI, a highly knowledgeable agricultural expert. You help Indian farmers with crop advice, weather, pest control, government schemes, market prices, and all farming-related questions.
+
+IMPORTANT - Language Guidelines:
+- User may write Hindi words using English letters (romanized Hindi), e.g., "Mere wheat me ki aane lagi hai" or "kaise ho" or "mujhe wheat ke liye sujhav chahiye"
+- UNDERSTAND both English AND Romanized Hindi (hinglish)
+- Respond in ${langName} language
+- Use Hindi script for responses if language is 'hi', use English if language is 'en'
+- Keep responses helpful, direct, and empathetic for Indian farmers
+- Use simple language that farmers can understand
+
+${sensorContext || ''}
+
+Provide accurate, up-to-date information based on current agricultural practices in India.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: [
+      { text: systemPrompt },
+      { text: userMessage }
+    ],
+    config: {
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  });
+
+  return response.text || 'Sorry, I could not understand. Please try again.';
+};

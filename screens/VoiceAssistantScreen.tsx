@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Mic, MicOff, Volume2, Loader2, Send } from 'lucide-react';
-import { AppLanguage, LANGUAGES } from '../types';
+import { ChevronLeft, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { AppLanguage } from '../types';
 import { arduinoService } from '../services/arduinoService';
-import { chatWithAI } from '../services/groqService';
+import { esp32Service } from '../services/esp32Service';
+import { chatWithAI } from '../services/geminiService';
 
 interface VoiceAssistantScreenProps {
   onBack: () => void;
@@ -12,9 +13,7 @@ interface VoiceAssistantScreenProps {
 const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, language }) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [transcription, setTranscription] = useState<string[]>([]);
-  const [currentText, setCurrentText] = useState('');
-  const [inputText, setInputText] = useState('');
+  const [statusText, setStatusText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   const recognitionRef = useRef<any>(null);
@@ -22,16 +21,24 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
 
   const translations = {
     title: language === 'hi' ? "एग्रीसारथी वॉइस AI" : "AgriSarthi Voice AI",
-    statusListening: language === 'hi' ? "सुन रहा हूं..." : "Listening...",
+    statusListening: language === 'hi' ? "सुन रहा हूं... बोलो" : "Listening... Speak now",
     statusProcessing: language === 'hi' ? "सोच रहा हूं..." : "Thinking...",
-    instruction: language === 'hi' ? "बोलने के लिए माइक दबाएं या टाइप करें" : "Tap mic to speak or type",
-    placeholder: language === 'hi' ? "अपना सवाल लिखें..." : "Type your question...",
+    tapToSpeak: language === 'hi' ? "बोलने के लिए माइक दबाएं" : "Tap mic to speak",
+    notSupported: language === 'hi' ? "आपके ब्राउज़र में वॉइस सपोर्ट नहीं है" : "Voice not supported in your browser",
   };
 
   const t = translations;
 
   const getSensorContext = () => {
-    const sensorData = arduinoService.getLastData();
+    const usbData = arduinoService.getLastData();
+    const wifiData = esp32Service.getLastData();
+    
+    const sensorData = usbData || wifiData;
+    
+    if (usbData && esp32Service.getConnectionStatus()) {
+      return `Current farm readings from both sensors - Temperature: ${sensorData.temperature}°C, Humidity: ${sensorData.humidity}%, Soil Moisture: ${sensorData.soilMoisture}%, Irrigation: ${sensorData.relayStatus ? 'ON' : 'OFF'}. `;
+    }
+    
     return sensorData 
       ? `Current farm readings - Temperature: ${sensorData.temperature}°C, Humidity: ${sensorData.humidity}%, Soil Moisture: ${sensorData.soilMoisture}%. `
       : '';
@@ -52,10 +59,9 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
           .join('');
         
         if (event.results[0].isFinal) {
-          setInputText(transcript);
-          handleSendMessage(transcript);
+          handleVoiceInput(transcript);
         } else {
-          setCurrentText(transcript);
+          setStatusText(transcript);
         }
       };
 
@@ -69,10 +75,12 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
   const startListening = () => {
     if (recognitionRef.current) {
       setIsListening(true);
-      setCurrentText('');
+      setStatusText('');
+      setIsSpeaking(false);
+      synthRef?.cancel();
       recognitionRef.current.start();
     } else {
-      alert('Speech recognition not supported. Please type.');
+      alert(t.notSupported);
     }
   };
 
@@ -94,22 +102,18 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
     synthRef.speak(utterance);
   };
 
-  const handleSendMessage = async (message?: string) => {
-    const textToSend = message || inputText;
-    if (!textToSend.trim()) return;
+  const handleVoiceInput = async (message: string) => {
+    if (!message.trim()) return;
 
+    setStatusText(message);
     setIsProcessing(true);
-    setCurrentText('');
-    setInputText('');
-    setTranscription(prev => [textToSend, ...prev].slice(0, 10));
 
     try {
-      const response = await chatWithAI(textToSend, language, getSensorContext());
-      setTranscription(prev => [response, ...prev].slice(0, 10));
+      const response = await chatWithAI(message, language, getSensorContext());
       speakResponse(response);
     } catch (error) {
       const errorMsg = language === 'hi' ? "माफ करना, कुछ गलत हो गया।" : "Sorry, something went wrong.";
-      setTranscription(prev => [errorMsg, ...prev].slice(0, 10));
+      speakResponse(errorMsg);
     } finally {
       setIsProcessing(false);
     }
@@ -117,7 +121,7 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-950 overflow-hidden">
-      <div className="flex-1 flex flex-col p-6 pb-32 overflow-y-auto">
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
         <header className="flex items-center mb-8 pt-8">
           <button onClick={onBack} className="bg-white/10 backdrop-blur-md p-3 rounded-2xl text-white/90 shadow-xl border border-white/10 active:scale-90 transition-transform">
             <ChevronLeft size={24} />
@@ -128,46 +132,42 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({ onBack, lan
           </div>
         </header>
 
-        <div className="flex-1 space-y-4">
-          {transcription.map((text, i) => (
-            <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
-              <div className={`max-w-[85%] p-5 rounded-[25px] shadow-lg ${i % 2 === 0 ? 'bg-white text-emerald-900 rounded-br-md' : 'bg-emerald-700/80 text-white rounded-bl-md backdrop-blur-sm'}`}>
-                <p className="text-sm font-bold leading-relaxed">{text}</p>
-              </div>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="text-center space-y-8">
+            <div className={`w-40 h-40 rounded-full flex items-center justify-center transition-all shadow-2xl ${isListening ? 'bg-red-500 animate-pulse scale-110' : isSpeaking ? 'bg-blue-500 animate-pulse' : 'bg-emerald-500'}`}>
+              {isProcessing ? (
+                <Loader2 size={64} className="text-white animate-spin" />
+              ) : isSpeaking ? (
+                <Volume2 size={64} className="text-white" />
+              ) : isListening ? (
+                <MicOff size={64} className="text-white" />
+              ) : (
+                <Mic size={64} className="text-white" />
+              )}
             </div>
-          ))}
 
-          {(isProcessing || currentText) && (
-            <div className="flex justify-end">
-              <div className="max-w-[85%] p-5 rounded-[25px] shadow-lg bg-white/10 backdrop-blur-sm border border-white/10 rounded-br-md">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="animate-spin text-emerald-300" size={18} />
-                  <p className="text-sm font-bold text-emerald-200">{isProcessing ? t.statusProcessing : currentText}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="fixed bottom-6 left-4 right-4 z-50">
-          <div className="bg-white/10 backdrop-blur-xl rounded-[40px] p-4 shadow-2xl border border-white/10">
-            <div className="flex items-center space-x-3">
-              <button onClick={isListening ? stopListening : startListening} disabled={isProcessing} className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg ${isListening ? 'bg-red-500 animate-pulse' : 'bg-emerald-500 hover:bg-emerald-400'} disabled:opacity-50`}>
-                {isListening ? <MicOff size={28} className="text-white" /> : <Mic size={28} className="text-white" />}
-              </button>
-              
-              <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder={t.placeholder} disabled={isProcessing} className="flex-1 bg-white/20 backdrop-blur-sm rounded-[25px] px-5 py-4 text-white placeholder-white/50 font-bold outline-none border border-white/10 focus:bg-white/30 transition-all" />
-              
-              <button onClick={() => handleSendMessage()} disabled={!inputText.trim() || isProcessing} className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform disabled:opacity-50">
-                {isProcessing ? <Loader2 className="animate-spin text-white" size={22} /> : <Send size={22} className="text-white" />}
-              </button>
-            </div>
-            <div className="flex items-center justify-center mt-3">
-              <p className="text-[10px] font-black text-emerald-300/70 uppercase tracking-widest">
-                {isListening ? t.statusListening : isProcessing ? t.statusProcessing : t.instruction}
+            <div className="space-y-2">
+              <p className="text-2xl font-black text-white">
+                {isListening ? t.statusListening : isProcessing ? t.statusProcessing : t.tapToSpeak}
               </p>
+              
+              {(statusText || isProcessing) && (
+                <p className="text-lg font-bold text-emerald-200 max-w-md mx-auto">
+                  {statusText}
+                </p>
+              )}
             </div>
           </div>
+        </div>
+
+        <div className="fixed bottom-12 left-0 right-0 flex justify-center z-50">
+          <button 
+            onClick={isListening ? stopListening : startListening} 
+            disabled={isProcessing}
+            className={`w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-2xl border-4 border-white/20 ${isListening ? 'bg-red-500 animate-pulse' : 'bg-emerald-500 hover:bg-emerald-400'} disabled:opacity-50`}
+          >
+            {isListening ? <MicOff size={40} className="text-white" /> : <Mic size={40} className="text-white" />}
+          </button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SensorData, AppLanguage, LANGUAGES } from "../types";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const getLangName = (code: AppLanguage) => LANGUAGES[code]?.name || "English";
 

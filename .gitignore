@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# PlatformIO
+.pio
+.pioenvs
+.piolibdeps
