@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Camera, Upload, Loader2, AlertTriangle, CheckCircle2, RefreshCcw, ShieldCheck, Microscope, AlertCircle, FileText } from 'lucide-react';
-import { detectCropDisease } from '../services/geminiService';
+import { detectCropDisease } from '../services/groqService';
 import { DiseaseResult } from '../types';
 
 interface DiseaseCheckScreenProps {
