@@ -1,0 +1,9 @@
+{
+  "name": "AgriSarthi - Voice Powered Farming",
+  "description": "An AI-powered agricultural assistant for farmers with voice-first onboarding.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation",
+    "microphone"
+  ]
+}
