@@ -12,6 +12,31 @@ const injectGlobalStyles = () => {
     const tailwind = document.createElement('script');
     tailwind.id = 'tailwind-cdn';
     tailwind.src = 'https://cdn.tailwindcss.com';
+    tailwind.onload = () => {
+      if (window.tailwind) {
+        window.tailwind.config({
+          theme: {
+            extend: {
+              colors: {
+                emerald: {
+                  50: '#ecfdf5',
+                  100: '#d1fae5',
+                  200: '#a7f3d0',
+                  300: '#6ee7b7',
+                  400: '#34d399',
+                  500: '#10b981',
+                  600: '#059669',
+                  700: '#047857',
+                  800: '#065f46',
+                  900: '#064e3b',
+                  950: '#022c22',
+                }
+              }
+            }
+          }
+        });
+      }
+    };
     document.head.appendChild(tailwind);
   }
 
@@ -144,6 +169,19 @@ const injectGlobalStyles = () => {
 };
 
 injectGlobalStyles();
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        console.log('SW registered:', registration.scope);
+      })
+      .catch((error) => {
+        console.log('SW registration failed:', error);
+      });
+  });
+}
 
 const rootElement = document.getElementById('root');
 if (rootElement) {

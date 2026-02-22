@@ -2,6 +2,12 @@
 export {};
 
 declare global {
+  interface Window {
+    tailwind?: {
+      config: (config: any) => void;
+    };
+  }
+
   interface Navigator {
     bluetooth: Bluetooth;
   }

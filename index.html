@@ -5,6 +5,13 @@
 <head>
   <meta charset="UTF-8">
   <title>AgriSarthi</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/424/424056.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AgriSarthi">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
   <script type="importmap">
   <script type="importmap">
   {
@@ -22,5 +29,18 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
+  <script>
+    // PWA Install Prompt Handler
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+    
+    // iOS Add to Homescreen prompt
+    if ('standalone' in window.navigator && !window.navigator.standalone) {
+      console.log('iOS: App can be added to homescreen');
+    }
+  </script>
 </body>
 </html>

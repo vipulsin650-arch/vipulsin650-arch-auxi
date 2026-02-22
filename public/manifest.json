@@ -4,34 +4,44 @@
   "description": "Voice-powered farming assistant for Indian farmers",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f0fdf4",
   "theme_color": "#059669",
-  "orientation": "portrait",
+  "scope": "/",
+  "lang": "hi",
+  "dir": "ltr",
+  "categories": ["agriculture", "productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
       "sizes": "72x72",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
       "sizes": "96x96",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
       "sizes": "128x128",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
       "sizes": "144x144",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
       "sizes": "152x152",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
@@ -42,7 +52,8 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
       "sizes": "384x384",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png",
@@ -51,9 +62,30 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["agriculture", "productivity", "utilities"],
-  "lang": "en",
-  "dir": "ltr",
-  "scope": "/",
-  "prefer_related_applications": false
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Disease Check",
+      "short_name": "Disease",
+      "description": "Scan crops for diseases",
+      "url": "/?screen=disease",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Voice Assistant",
+      "short_name": "Voice",
+      "description": "Talk to AI Assistant",
+      "url": "/?screen=voice",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Sensor Dashboard",
+      "short_name": "Sensors",
+      "description": "View sensor data",
+      "url": "/?screen=sensors",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/424/424056.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "handheld_enabled": true
 }

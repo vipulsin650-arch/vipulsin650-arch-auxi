@@ -153,7 +153,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`max-w-md mx-auto h-screen flex flex-col ios-bg shadow-2xl overflow-hidden relative ${isDarkMode ? 'dark-theme' : ''}`}>
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
         {renderScreen()}
       </div>
       
