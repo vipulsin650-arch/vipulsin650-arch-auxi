@@ -96,7 +96,7 @@ const VoiceAssistantScreen: React.FC<VoiceAssistantScreenProps> = ({
     '';
   
   const sensorInfo = sensorData ? 
-    `Field sensors show: Temperature ${sensorData.temperature || 'N/A'}°C, Humidity ${sensorData.humidity || 'N/A'}%` : 
+    `Field sensor readings - Soil Moisture: ${sensorData.soilMoisture !== undefined ? sensorData.soilMoisture + '%' : 'N/A'}, Temperature: ${sensorData.temperature || 'N/A'}°C, Air Humidity: ${sensorData.humidity || 'N/A'}%` : 
     '';
 
   const systemPrompt = `You are AgriSarthi AI, a highly knowledgeable agricultural expert for Indian farmers. 
