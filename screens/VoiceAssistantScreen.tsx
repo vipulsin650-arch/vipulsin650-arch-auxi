@@ -132,7 +132,7 @@ You help Indian farmers with crop advice, weather-based recommendations, pest co
 
   const startSession = async () => {
     setIsConnecting(true);
-    const ai = new GoogleGenAI({ apiKey: 'AIzaSyBFiqsd9lbHuu7_hYuroyVlmBj4cMP7SMU' });
+    const ai = new GoogleGenAI({ apiKey: 'AIzaSyDY_uUfnNL5AP8iTcDzrFyh4wnur0Kwg7U' });
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
