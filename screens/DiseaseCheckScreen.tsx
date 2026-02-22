@@ -13,7 +13,10 @@ const DiseaseCheckScreen: React.FC<DiseaseCheckScreenProps> = ({ onBack, languag
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DiseaseResult | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const translations = {
     en: {
@@ -51,10 +54,56 @@ const DiseaseCheckScreen: React.FC<DiseaseCheckScreenProps> = ({ onBack, languag
   const t = translations[language];
 
   useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
   }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setCameraActive(true);
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  };
+
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const captured = canvas.toDataURL('image/jpeg', 0.9);
+        setImage(captured);
+        setResult(null);
+        stopCamera();
+      }
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -103,10 +152,27 @@ const DiseaseCheckScreen: React.FC<DiseaseCheckScreenProps> = ({ onBack, languag
 
       <div className="space-y-6">
         <div 
-          onClick={() => !loading && fileInputRef.current?.click()}
           className="aspect-square w-full rounded-[45px] glass-card border-2 border-dashed border-emerald-500/20 flex flex-col items-center justify-center cursor-pointer overflow-hidden group hover:border-emerald-500/50 transition-all shadow-xl relative"
         >
-          {image ? (
+          {cameraActive ? (
+            <div className="w-full h-full relative">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+                <button
+                  onClick={captureImage}
+                  className="bg-emerald-600 text-white px-8 py-4 rounded-full font-black text-sm shadow-xl flex items-center space-x-2 uppercase tracking-widest active:scale-95 transition-all"
+                >
+                  <Camera size={20} />
+                  <span>Capture</span>
+                </button>
+              </div>
+            </div>
+          ) : image ? (
             <div className="w-full h-full relative">
               <img src={image} alt="Crop" className="w-full h-full object-cover animate-in zoom-in duration-500" />
               {loading && <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
@@ -133,8 +199,37 @@ const DiseaseCheckScreen: React.FC<DiseaseCheckScreenProps> = ({ onBack, languag
               </div>
             </div>
           )}
+          <canvas ref={canvasRef} className="hidden" />
           <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
         </div>
+
+        {!image && !cameraActive && !loading && (
+          <div className="flex gap-3">
+            <button
+              onClick={startCamera}
+              className="flex-1 bg-emerald-600 text-white py-4 rounded-[25px] font-black text-sm shadow-xl flex items-center justify-center space-x-2 uppercase tracking-[0.2em]"
+            >
+              <Camera size={18} />
+              <span>Open Camera</span>
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 bg-emerald-600 text-white py-4 rounded-[25px] font-black text-sm shadow-xl flex items-center justify-center space-x-2 uppercase tracking-[0.2em]"
+            >
+              <Upload size={18} />
+              <span>Upload</span>
+            </button>
+          </div>
+        )}
+
+        {cameraActive && (
+          <button
+            onClick={stopCamera}
+            className="w-full glass-card text-theme-main py-4 rounded-[25px] font-black text-xs uppercase tracking-widest flex items-center justify-center"
+          >
+            Cancel Camera
+          </button>
+        )}
 
         {image && !result && !loading && (
           <button
@@ -182,11 +277,11 @@ const DiseaseCheckScreen: React.FC<DiseaseCheckScreenProps> = ({ onBack, languag
             </div>
 
             <button 
-              onClick={() => { setImage(null); setResult(null); }}
+              onClick={() => { setImage(null); setResult(null); startCamera(); }}
               className="w-full py-5 glass-card text-theme-main rounded-[30px] font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2"
             >
               <RefreshCcw size={16} />
-              <span>{t.another}</span>
+              <span>Scan New Sample</span>
             </button>
           </div>
         )}

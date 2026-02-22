@@ -1,9 +1,8 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Activity, Thermometer, Droplets, Power, Sparkles, Loader2, Wifi, WifiOff, Usb, Settings } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ChevronLeft, Activity, Thermometer, Droplets, Power, Sparkles, Loader2, Bluetooth, BluetoothOff, RefreshCw } from 'lucide-react';
 import { AppLanguage, SensorData } from '../types';
-import { arduinoService } from '../services/arduinoService';
-import { esp32Service } from '../services/esp32Service';
+import { bluetoothService } from '../services/bluetoothService';
 import { getSensorAdvice } from '../services/sensorAdviceService';
 
 interface SensorDashboardScreenProps {
@@ -11,74 +10,84 @@ interface SensorDashboardScreenProps {
   language: AppLanguage;
 }
 
-type ConnectionMode = 'usb' | 'wifi';
-
 const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, language }) => {
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('usb');
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  const [espIpAddress, setEspIpAddress] = useState('');
-  const [showIpModal, setShowIpModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [waitingForData, setWaitingForData] = useState(false);
+  const dataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSensorUpdate = useCallback((data: SensorData) => {
     setSensorData(data);
+    setWaitingForData(false);
+    if (dataTimeoutRef.current) {
+      clearTimeout(dataTimeoutRef.current);
+    }
   }, []);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-    
-    if (connectionMode === 'usb') {
-      unsubscribe = arduinoService.subscribe(handleSensorUpdate);
-      setIsConnected(arduinoService.getConnectionStatus());
-      setSensorData(arduinoService.getLastData());
-    } else {
-      unsubscribe = esp32Service.subscribe(handleSensorUpdate);
-      setIsConnected(esp32Service.getConnectionStatus());
-      setSensorData(esp32Service.getLastData());
-    }
+    const unsubscribe = bluetoothService.subscribe(handleSensorUpdate);
+    setIsConnected(bluetoothService.getConnectionStatus());
+    setSensorData(bluetoothService.getLastData());
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribe();
+      if (dataTimeoutRef.current) {
+        clearTimeout(dataTimeoutRef.current);
+      }
     };
-  }, [connectionMode, handleSensorUpdate]);
+  }, [handleSensorUpdate]);
 
   const handleConnect = async () => {
-    if (connectionMode === 'wifi' && !espIpAddress) {
-      setShowIpModal(true);
-      return;
-    }
-
     setIsConnecting(true);
-    let success = false;
+    setError('');
 
-    if (connectionMode === 'usb') {
-      success = await arduinoService.connect();
-    } else {
-      esp32Service.setIpAddress(espIpAddress);
-      success = await esp32Service.connect();
-    }
-
+    const success = await bluetoothService.connect();
+    
     setIsConnected(success);
     setIsConnecting(false);
 
-    if (success) {
-      const data = connectionMode === 'usb' 
-        ? arduinoService.getLastData() 
-        : esp32Service.getLastData();
-      if (data) setSensorData(data);
+    if (!success) {
+      setError(language === 'hi' ? 'कनेक्ट करने में विफल। सुनिश्चित करें कि ESP32 चालू है और पास है।' : 'Connection failed. Make sure ESP32 is on and nearby.');
+    } else {
+      setWaitingForData(true);
+      
+      if (dataTimeoutRef.current) {
+        clearTimeout(dataTimeoutRef.current);
+      }
+      
+      dataTimeoutRef.current = setTimeout(() => {
+        setWaitingForData(false);
+        const data = bluetoothService.getLastData();
+        if (data) {
+          setSensorData(data);
+        }
+      }, 8000);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await bluetoothService.requestData();
+      const data = bluetoothService.getLastData();
+      if (data) {
+        setSensorData(data);
+      }
+    } catch (e) {
+      console.error('Refresh error:', e);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
   const handleDisconnect = async () => {
-    if (connectionMode === 'usb') {
-      await arduinoService.disconnect();
-    } else {
-      esp32Service.disconnect();
-    }
+    await bluetoothService.disconnect();
     setIsConnected(false);
     setSensorData(null);
     setAiAdvice('');
@@ -90,17 +99,10 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     
     const newState = sensorData.relayStatus ? 'OFF' : 'ON';
     
-    let success = false;
-    if (connectionMode === 'usb') {
-      success = await arduinoService.sendRelayCommand(newState as 'ON' | 'OFF');
-    } else {
-      success = await esp32Service.sendRelayCommand(newState as 'ON' | 'OFF' | 'TOGGLE');
-    }
+    const success = await bluetoothService.sendRelayCommand(newState as 'ON' | 'OFF' | 'TOGGLE');
     
     setTimeout(() => {
-      const data = connectionMode === 'usb' 
-        ? arduinoService.getLastData() 
-        : esp32Service.getLastData();
+      const data = bluetoothService.getLastData();
       if (data) setSensorData(data);
       setIsToggling(false);
     }, 1000);
@@ -121,13 +123,6 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     }
   };
 
-  const handleIpSubmit = () => {
-    if (espIpAddress.trim()) {
-      setShowIpModal(false);
-      handleConnect();
-    }
-  };
-
   const t = {
     title: language === 'hi' ? 'सेंसर डैशबोर्ड' : 'Sensor Dashboard',
     connect: language === 'hi' ? 'सेंसर कनेक्ट करें' : 'Connect Sensors',
@@ -135,6 +130,7 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     connecting: language === 'hi' ? 'कनेक्ट हो रहे हैं...' : 'Connecting...',
     notConnected: language === 'hi' ? 'सेंसर से कनेक्ट नहीं है' : 'Not Connected',
     connected: language === 'hi' ? 'कनेक्टेड' : 'Connected',
+    waitingForData: language === 'hi' ? 'डेटा का इंतज़ार है...' : 'Waiting for data...',
     soilMoisture: language === 'hi' ? 'मिट्टी की नमी' : 'Soil Moisture',
     temperature: language === 'hi' ? 'तापमान' : 'Temperature',
     humidity: language === 'hi' ? 'नमी' : 'Humidity',
@@ -143,13 +139,8 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
     relayOn: language === 'hi' ? 'चालू' : 'ON',
     relayOff: language === 'hi' ? 'बंद' : 'OFF',
     tapToConnect: language === 'hi' ? 'सेंसर से कनेक्ट करने के लिए टैप करें' : 'Tap to connect to sensors',
-    enterIp: language === 'hi' ? 'ESP32 IP Address दर्ज करें' : 'Enter ESP32 IP Address',
-    ipPlaceholder: language === 'hi' ? '192.168.1.100' : '192.168.1.100',
-    submit: language === 'hi' ? 'कनेक्ट करें' : 'Connect',
-    cancel: language === 'hi' ? 'रद्द करें' : 'Cancel',
-    usbMode: language === 'hi' ? 'USB' : 'USB',
-    wifiMode: language === 'hi' ? 'WiFi' : 'WiFi',
-    selectMode: language === 'hi' ? 'कनेक्शन मोड चुनें' : 'Select Connection Mode'
+    btNotSupported: language === 'hi' ? 'ब्लूटूथ सपोर्ट नहीं है। Chrome/Edge का उपयोग करें।' : 'Bluetooth not supported. Use Chrome/Edge.',
+    refresh: language === 'hi' ? 'रिफ्रेश' : 'Refresh',
   };
 
   return (
@@ -167,70 +158,52 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
           <div className="flex items-center space-x-2 mt-1">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`}></div>
             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400/60">
-              {isConnecting ? t.connecting : isConnected ? t.connected : t.notConnected}
+              {isConnecting ? t.connecting : waitingForData ? t.waitingForData : isConnected ? t.connected : t.notConnected}
             </p>
           </div>
         </div>
-        {!isConnected && (
-          <div className="flex bg-white/5 rounded-xl p-1">
-            <button
-              onClick={() => setConnectionMode('usb')}
-              className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-xs font-bold transition-all ${
-                connectionMode === 'usb' ? 'bg-emerald-600 text-white' : 'text-emerald-400/60'
-              }`}
-            >
-              <Usb size={14} />
-              <span>{t.usbMode}</span>
-            </button>
-            <button
-              onClick={() => setConnectionMode('wifi')}
-              className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-xs font-bold transition-all ${
-                connectionMode === 'wifi' ? 'bg-emerald-600 text-white' : 'text-emerald-400/60'
-              }`}
-            >
-              <Wifi size={14} />
-              <span>{t.wifiMode}</span>
-            </button>
-          </div>
-        )}
+        <button 
+          onClick={handleRefresh}
+          disabled={!isConnected || isRefreshing}
+          className={`p-3 rounded-2xl transition-all ${isConnected && !waitingForData ? 'bg-white/10 text-white active:scale-90' : 'text-gray-600'}`}
+        >
+          <RefreshCw size={20} className={isRefreshing ? 'animate-spin' : ''} />
+        </button>
+        <Bluetooth size={24} className={`ml-2 ${isConnected ? 'text-emerald-400' : 'text-gray-500'}`} />
       </header>
 
-      {connectionMode === 'wifi' && !isConnected && (
-        <div className="mb-4 flex items-center space-x-2">
-          <button
-            onClick={() => setShowIpModal(true)}
-            className="flex-1 bg-white/5 border border-white/10 py-3 px-4 rounded-xl flex items-center justify-center space-x-2 text-sm font-bold text-emerald-400"
-          >
-            <Settings size={16} />
-            <span>{espIpAddress ? espIpAddress : t.enterIp}</span>
-          </button>
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-200 text-sm font-bold">
+          {error}
         </div>
       )}
 
       {!isConnected ? (
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="w-32 h-32 bg-white/5 rounded-full flex items-center justify-center mb-8">
-            <Activity size={48} className="text-emerald-400/40" />
+            <Bluetooth size={48} className="text-emerald-400/40" />
           </div>
           <p className="text-emerald-100/40 text-sm font-bold text-center mb-8 max-w-xs">
-            {connectionMode === 'wifi' 
-              ? (language === 'hi' ? 'ESP32 IP address दर्ज करें और कनेक्ट करें' : 'Enter ESP32 IP address to connect')
-              : t.tapToConnect
-            }
+            {t.tapToConnect}
           </p>
           <button 
             onClick={handleConnect}
             disabled={isConnecting}
             className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center space-x-3 shadow-xl active:scale-95 transition-transform"
           >
-            {isConnecting ? <Loader2 size={18} className="animate-spin" /> : (
-              connectionMode === 'wifi' ? <Wifi size={18} /> : <Usb size={18} />
-            )}
+            {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Bluetooth size={18} />}
             <span>{isConnecting ? t.connecting : t.connect}</span>
           </button>
         </div>
       ) : (
         <>
+          {waitingForData && (
+            <div className="mb-4 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center space-x-3">
+              <Loader2 size={18} className="text-emerald-400 animate-spin" />
+              <p className="text-emerald-400 text-sm font-bold">{t.waitingForData}</p>
+            </div>
+          )}
+          
           <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
             <div className="glass-card p-5 rounded-[32px] shadow-lg">
               <div className="flex items-center justify-between mb-3">
@@ -307,39 +280,10 @@ const SensorDashboardScreen: React.FC<SensorDashboardScreenProps> = ({ onBack, l
             onClick={handleDisconnect}
             className="mt-4 py-3 text-emerald-400/60 text-xs font-black uppercase tracking-widest flex items-center justify-center space-x-2"
           >
-            <WifiOff size={14} />
+            <BluetoothOff size={14} />
             <span>{t.disconnect}</span>
           </button>
         </>
-      )}
-
-      {showIpModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
-          <div className="bg-emerald-900 p-6 rounded-3xl w-full max-w-sm">
-            <h3 className="text-lg font-black uppercase tracking-wide mb-4">{t.enterIp}</h3>
-            <input
-              type="text"
-              value={espIpAddress}
-              onChange={(e) => setEspIpAddress(e.target.value)}
-              placeholder={t.ipPlaceholder}
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 font-bold mb-4"
-            />
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowIpModal(false)}
-                className="flex-1 py-3 rounded-xl font-black text-sm uppercase bg-white/10 text-white"
-              >
-                {t.cancel}
-              </button>
-              <button
-                onClick={handleIpSubmit}
-                className="flex-1 py-3 rounded-xl font-black text-sm uppercase bg-emerald-600 text-white"
-              >
-                {t.submit}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

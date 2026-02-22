@@ -1,18 +1,28 @@
-#include <WiFi.h>
+
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
 #include <DHT.h>
-#include <WebServer.h>
 
 #define DHTPIN 4
 #define DHTTYPE DHT22
 #define SOIL_PIN 34
 #define RELAY_PIN 5
 
+#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SENSOR_DATA_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define RELAY_CONTROL_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a9"
+#define DATA_REQUEST_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26aa"
+
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* ssid = "HOTSPOT";
-const char* password = "123456789";
-
-WebServer server(80);
+BLEServer* pServer = NULL;
+BLECharacteristic* pSensorDataChar = NULL;
+BLECharacteristic* pRelayControlChar = NULL;
+BLECharacteristic* pDataRequestChar = NULL;
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
 
 float humidity = 0;
 float temperature = 0;
@@ -22,55 +32,70 @@ bool relayStatus = false;
 unsigned long lastReadTime = 0;
 const unsigned long readInterval = 5000;
 
-void handleRoot() {
-  String html = "<html><head><title>ESP32 Sensor Data</title></head><body>";
-  html += "<h1>ESP32 Sensor Dashboard</h1>";
-  html += "<p>Temperature: " + String(temperature) + "°C</p>";
-  html += "<p>Humidity: " + String(humidity) + "%</p>";
-  html += "<p>Soil Moisture: " + String(soilMoisture) + "%</p>";
-  html += "<p>Relay Status: " + String(relayStatus ? "ON" : "OFF") + "</p>";
-  html += "<hr>";
-  html += "<p>JSON Data: <a href='/data'>/data</a></p>";
-  html += "<p>Relay Control:</p>";
-  html += "<ul>";
-  html += "<li><a href='/relay?state=ON'>Turn ON</a></li>";
-  html += "<li><a href='/relay?state=OFF'>Turn OFF</a></li>";
-  html += "<li><a href='/relay?state=TOGGLE'>Toggle</a></li>";
-  html += "</ul>";
-  html += "</body></html>";
-  server.send(200, "text/html", html);
-}
+void readSensors();
+void sendSensorData();
 
-void handleData() {
-  String json = "{";
-  json += "\"temperature\":" + String(int(temperature)) + ",";
-  json += "\"humidity\":" + String(int(humidity)) + ",";
-  json += "\"soilMoisture\":" + String(soilMoisture) + ",";
-  json += "\"relayStatus\":" + String(relayStatus ? "true" : "false");
-  json += "}";
-  server.send(200, "application/json", json);
-}
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+      oldDeviceConnected = true;
+      Serial.println("Client connected");
+      delay(100);
+      readSensors();
+      sendSensorData();
+    };
 
-void handleRelay() {
-  if (server.hasArg("state")) {
-    String state = server.arg("state");
-    if (state == "ON") {
-      digitalWrite(RELAY_PIN, HIGH);
-      relayStatus = true;
-      server.send(200, "text/plain", "Relay ON");
-    } else if (state == "OFF") {
-      digitalWrite(RELAY_PIN, LOW);
-      relayStatus = false;
-      server.send(200, "text/plain", "Relay OFF");
-    } else if (state == "TOGGLE") {
-      relayStatus = !relayStatus;
-      digitalWrite(RELAY_PIN, relayStatus ? HIGH : LOW);
-      server.send(200, "text/plain", relayStatus ? "Relay Toggled ON" : "Relay Toggled OFF");
-    } else {
-      server.send(400, "text/plain", "Invalid state. Use ON, OFF, or TOGGLE");
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+      Serial.println("Client disconnected");
     }
-  } else {
-    server.send(400, "text/plain", "Missing state parameter");
+};
+
+class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string rxValue = pCharacteristic->getValue();
+      
+      if (rxValue.length() > 0) {
+        Serial.print("Received: ");
+        for (int i = 0; i < rxValue.length(); i++) {
+          Serial.print(rxValue[i]);
+        }
+        Serial.println();
+        
+        if (rxValue.find("ON") != std::string::npos) {
+          digitalWrite(RELAY_PIN, HIGH);
+          relayStatus = true;
+          Serial.println("Relay ON");
+        } else if (rxValue.find("OFF") != std::string::npos) {
+          digitalWrite(RELAY_PIN, LOW);
+          relayStatus = false;
+          Serial.println("Relay OFF");
+        } else if (rxValue.find("TOGGLE") != std::string::npos) {
+          relayStatus = !relayStatus;
+          digitalWrite(RELAY_PIN, relayStatus ? HIGH : LOW);
+          Serial.print("Relay Toggled: ");
+          Serial.println(relayStatus ? "ON" : "OFF");
+        } else if (rxValue.find("READ") != std::string::npos) {
+          Serial.println("Data read requested");
+        }
+        
+        sendSensorData();
+      }
+    }
+};
+
+void sendSensorData() {
+  if (deviceConnected && pSensorDataChar != NULL) {
+    String json = "{";
+    json += "\"temperature\":" + String(int(temperature)) + ",";
+    json += "\"humidity\":" + String(int(humidity)) + ",";
+    json += "\"soilMoisture\":" + String(soilMoisture) + ",";
+    json += "\"relayStatus\":" + String(relayStatus ? "true" : "false");
+    json += "}";
+    
+    pSensorDataChar->setValue(json.c_str());
+    pSensorDataChar->notify();
+    Serial.println("Sent sensor data via BLE");
   }
 }
 
@@ -94,49 +119,61 @@ void setup() {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
   
-  Serial.println();
-  Serial.println("Connecting to WiFi...");
-  WiFi.begin(ssid, password);
+  Serial.println("Starting BLE Server...");
   
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
+  BLEDevice::init("AgriSarthi-ESP32");
   
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println();
-    Serial.println("WiFi Connected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println();
-    Serial.println("WiFi Connection Failed! Check your SSID and Password.");
-  }
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
   
-  server.on("/", handleRoot);
-  server.on("/data", handleData);
-  server.on("/relay", handleRelay);
+  BLEService *pService = pServer->createService(SERVICE_UUID);
   
-  server.begin();
-  Serial.println("HTTP Server started");
+  pSensorDataChar = pService->createCharacteristic(
+    SENSOR_DATA_CHAR_UUID,
+    BLECharacteristic::PROPERTY_NOTIFY
+  );
+  pSensorDataChar->addDescriptor(new BLE2902());
+  
+  pRelayControlChar = pService->createCharacteristic(
+    RELAY_CONTROL_CHAR_UUID,
+    BLECharacteristic::PROPERTY_WRITE
+  );
+  pRelayControlChar->setCallbacks(new MyCharacteristicCallbacks());
+  
+  pDataRequestChar = pService->createCharacteristic(
+    DATA_REQUEST_CHAR_UUID,
+    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY
+  );
+  pDataRequestChar->setCallbacks(new MyCharacteristicCallbacks());
+  pDataRequestChar->addDescriptor(new BLE2902());
+  
+  pService->start();
+  
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMinPreferred(0x12);
+  BLEDevice::startAdvertising();
+  
+  Serial.println("BLE Server started!");
+  Serial.println("Device name: AgriSarthi-ESP32");
+  Serial.println("Waiting for client connection...");
   
   readSensors();
 }
 
 void loop() {
-  server.handleClient();
-  
   unsigned long currentTime = millis();
   if (currentTime - lastReadTime >= readInterval) {
     readSensors();
+    sendSensorData();
     lastReadTime = currentTime;
     
     Serial.println("--- Sensor Data ---");
     Serial.print("Temperature: ");
     Serial.print(int(temperature));
-    Serial.println("°C");
+    Serial.println(" C");
     Serial.print("Humidity: ");
     Serial.print(int(humidity));
     Serial.println("%");
@@ -146,4 +183,16 @@ void loop() {
     Serial.print("Relay: ");
     Serial.println(relayStatus ? "ON" : "OFF");
   }
+  
+  if (!deviceConnected && oldDeviceConnected) {
+    Serial.println("Restarting advertising...");
+    BLEDevice::startAdvertising();
+    oldDeviceConnected = false;
+  }
+  
+  if (deviceConnected && !oldDeviceConnected) {
+    oldDeviceConnected = true;
+  }
+  
+  delay(100);
 }

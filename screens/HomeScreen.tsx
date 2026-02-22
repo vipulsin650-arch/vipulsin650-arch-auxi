@@ -22,12 +22,11 @@ import {
   Thermometer,
   Droplets,
   Power,
-  Wifi,
-  WifiOff
+  Bluetooth
 } from 'lucide-react';
 import { AppScreen, User, Theme, AppLanguage, LANGUAGES, SensorData } from '../types';
 import { getWeatherByLocationName } from '../services/geminiService';
-import { arduinoService } from '../services/arduinoService';
+import { bluetoothService } from '../services/bluetoothService';
 
 interface HomeScreenProps {
   user: User | null;
@@ -123,6 +122,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, onSaveUser, onNavigate, o
     try {
       const data = await getWeatherByLocationName(locName, language);
       setWeather(data);
+      localStorage.setItem('weatherData', JSON.stringify(data));
     } catch (e) {
       console.error(e);
     } finally {
@@ -140,13 +140,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, onSaveUser, onNavigate, o
     const handleSensorUpdate = (data: SensorData) => {
       setSensorData(data);
       setIsSensorConnected(true);
+      localStorage.setItem('sensorData', JSON.stringify(data));
     };
 
-    const unsubscribe = arduinoService.subscribe(handleSensorUpdate);
+    const unsubscribe = bluetoothService.subscribe(handleSensorUpdate);
     
-    if (arduinoService.getConnectionStatus()) {
+    if (bluetoothService.getConnectionStatus()) {
       setIsSensorConnected(true);
-      setSensorData(arduinoService.getLastData());
+      setSensorData(bluetoothService.getLastData());
     }
 
     return () => {
@@ -156,10 +157,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, onSaveUser, onNavigate, o
 
   const handleSensorConnect = async () => {
     setIsConnectingSensor(true);
-    const success = await arduinoService.connect();
+    const success = await bluetoothService.connect();
     setIsSensorConnected(success);
     if (success) {
-      const data = arduinoService.getLastData();
+      const data = bluetoothService.getLastData();
       if (data) setSensorData(data);
     }
     setIsConnectingSensor(false);
@@ -252,7 +253,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user, onSaveUser, onNavigate, o
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className={`p-2.5 rounded-xl ${isSensorConnected ? 'bg-cyan-100' : 'bg-gray-100'}`}>
-                {isConnectingSensor ? <RefreshCw size={18} className="text-cyan-600 animate-spin" /> : isSensorConnected ? <Activity size={18} className="text-cyan-600" /> : <WifiOff size={18} className="text-gray-400" />}
+                {isConnectingSensor ? <RefreshCw size={18} className="text-cyan-600 animate-spin" /> : isSensorConnected ? <Activity size={18} className="text-cyan-600" /> : <Bluetooth size={18} className="text-gray-400" />}
               </div>
               <div>
                 <span className="text-emerald-900/60 text-[10px] font-black uppercase tracking-[0.2em]">Sensors</span>
